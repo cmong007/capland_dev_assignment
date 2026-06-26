@@ -9,7 +9,8 @@ Rather than spending hours manually pulling comparable transactions from the URA
 ## The Problem & The Solution
 
 * **The Problem:** Assessing a new site is slow and manual. Analysts have to log into different portals for historical sales data, look up zoning laws, estimate competitor pipelines from broker reports, and build financial underwriting templates from scratch. This leads to slow turnaround times and inconsistent bid proposals.
-* **The Solution:** This tool automates the grunt work. It takes a target site location, pulls transaction history around it, identifies pipeline competitor projects, runs a residual land value bid model, and generates a draft investment memo. (For this POC, data is sourced from the URA API and Realis CSVs, but the pipeline is designed to support other data providers in the future).
+* **The Solution:** This tool automates the grunt work. It takes a target site location, pulls transaction history around it, identifies pipeline competitor projects, runs a residual land value bid model, and generates a draft investment memo.
+  * **URA Data Sourced:** Queries URA's private residential transaction API (`PMI_Resi_Transaction`) to extract transaction records (prices, sizes, storey levels, dates, tenure, and sale types). The pipeline can be extended to support other data providers in the future.
 
 ```mermaid
 flowchart LR

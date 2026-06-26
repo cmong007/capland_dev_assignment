@@ -1,9 +1,8 @@
 """
 schemas.py
 ----------
-Pydantic data models defining the structured output schemas for the
-SiteIntel AI extraction engine. These schemas are passed to the Gemini
-API to guarantee typed, structured JSON responses.
+Pydantic data models defining the structured output schemas. These schemas 
+are passed to the Gemini API to guarantee typed, structured JSON responses.
 """
 
 from pydantic import BaseModel, Field

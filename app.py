@@ -530,7 +530,7 @@ with tab1:
         f'Comps are filtered by proximity, district, tenure and property type.</div>',
         unsafe_allow_html=True
     )
-    st.dataframe(df_display, use_container_width=True, hide_index=True)
+    st.dataframe(df_display, width='stretch', hide_index=True)
 
     st.markdown("### 🏢 Competitor Supply Pipeline")
     st.caption("Upcoming private residential developments in this district's pipeline. Filtered by selected proximity radius.")
@@ -550,7 +550,7 @@ with tab1:
         # Format units cleanly
         if "Estimated Units" in df_supply.columns:
             df_supply["Estimated Units"] = df_supply["Estimated Units"].apply(lambda x: f"{x:,}" if isinstance(x, int) else x)
-        st.dataframe(df_supply, use_container_width=True, hide_index=True)
+        st.dataframe(df_supply, width='stretch', hide_index=True)
     else:
         st.info("ℹ️ No upcoming competitor projects identified in this catchment area pipeline.")
 
@@ -621,7 +621,7 @@ with tab2:
                 yaxis=dict(gridcolor=GRID_COL),
                 legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
             )
-            st.plotly_chart(fig_scatter, use_container_width=True)
+            st.plotly_chart(fig_scatter, width='stretch')
 
         st.markdown("**Catchment Capital Value Distribution (PSF)**")
         st.caption("Distribution of transacted capital values (PSF) in this catchment. The dashed line marks the strict Median PSF benchmark.")
@@ -653,7 +653,7 @@ with tab2:
                 xaxis=dict(gridcolor=GRID_COL, tickfont=dict(size=9)),
                 yaxis=dict(gridcolor=GRID_COL),
             )
-            st.plotly_chart(fig_hist, use_container_width=True)
+            st.plotly_chart(fig_hist, width='stretch')
 
     # Right Column: Age Premium & Trends
     with chart_col2:
@@ -696,7 +696,7 @@ with tab2:
                 yaxis=dict(gridcolor=GRID_COL),
                 legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
             )
-            st.plotly_chart(fig_age, use_container_width=True)
+            st.plotly_chart(fig_age, width='stretch')
 
         st.markdown("**Quarterly Transaction Volume & Price Trend**")
         st.caption("Catchment transaction velocity (bar, left axis) mapped against Average PSF trend (line, right axis) over time.")
@@ -746,7 +746,7 @@ with tab2:
                     showgrid=False
                 )
             )
-            st.plotly_chart(fig_q, use_container_width=True)
+            st.plotly_chart(fig_q, width='stretch')
 
 # ── Tab 3: AI Assessment ─────────────────────────────────────────────────
 with tab3:
@@ -801,7 +801,7 @@ with tab3:
     ]
     
     df_provenance = pd.DataFrame(provenance_data)
-    st.dataframe(df_provenance, use_container_width=True, hide_index=True)
+    st.dataframe(df_provenance, width='stretch', hide_index=True)
 
     # Sidebar / Inspector option for Golden Record JSON
     with st.expander("🔍 Inspect Compiled Golden Record JSON Payload"):
@@ -830,7 +830,7 @@ with tab3:
     if st.session_state["ai_assessment"] is None:
         # Prompt user to generate
         st.info("ℹ️ The assessment memo will not generate automatically to avoid unnecessary API cost/churn. Review the provenance table above and click below to trigger.")
-        if st.button("🤖 Run AI Synthesis & Assessment", type="primary", use_container_width=True):
+        if st.button("🤖 Run AI Synthesis & Assessment", type="primary", width='stretch'):
             with st.spinner("Executing Zero-Hallucination AI Synthesis on Golden Record..."):
                 assessment = generate_assessment(
                     golden_record,
@@ -845,7 +845,7 @@ with tab3:
         # We have an assessment. Show the button to rerun and the editor.
         col_btn_rerun, col_btn_clear = st.columns([3, 1])
         with col_btn_rerun:
-            if st.button("🔄 Regenerate AI Synthesis", type="secondary", use_container_width=True):
+            if st.button("🔄 Regenerate AI Synthesis", type="secondary", width='stretch'):
                 with st.spinner("Re-executing AI Synthesis on Golden Record..."):
                     assessment = generate_assessment(
                         golden_record,
@@ -857,7 +857,7 @@ with tab3:
                     st.session_state["edited_memo"] = assessment
                     st.rerun()
         with col_btn_clear:
-            if st.button("🗑️ Clear", type="secondary", use_container_width=True):
+            if st.button("🗑️ Clear", type="secondary", width='stretch'):
                 del st.session_state["ai_assessment"]
                 if "edited_memo" in st.session_state:
                     del st.session_state["edited_memo"]
@@ -884,7 +884,7 @@ with tab3:
             data=st.session_state.get("edited_memo", ""),
             file_name=f"{site_details['site_name'].replace(' ', '_')}_Viability_Memo.md",
             mime="text/markdown",
-            use_container_width=True
+            width='stretch'
         )
 
     # ── AI Insights Overlay ──

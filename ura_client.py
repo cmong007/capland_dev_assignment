@@ -423,7 +423,7 @@ def _generate_mock_transactions(district: str, tenure_filter: str, property_type
     transactions = []
     n = random.randint(35, 80)
 
-    end_date = datetime(2024, 6, 1)
+    end_date = datetime(2026, 6, 1)
 
     for _ in range(n):
         # Random date in the past `months`
@@ -464,6 +464,11 @@ def _generate_mock_transactions(district: str, tenure_filter: str, property_type
         proj_entry = _PROJECT_DB_LOOKUP.get(proj_upper, {})
         is_buc = proj_entry.get("completion_year") is None
         age_multiplier = proj_entry.get("age_mult", 1.0)
+        sale_type = "New Sale" if is_buc else "Resale"
+
+        # PSF — freehold premium + floor premium + random noise
+        fh_premium = 0.15 if is_fh else 0.0
+        base_psf = random.uniform(psf_min, psf_max)
 
         psf = round(base_psf * (1 + fh_premium + floor_premium) * age_multiplier, 0)
         price = round((psf * size_sqft) / 1000) * 1000
@@ -605,61 +610,76 @@ def _fetch_live(district: str, tenure: str, property_type: str) -> list[dict]:
         "3": "Resale"
     }
 
-    for batch in range(1, 5):
-        url = f"https://eservice.ura.gov.sg/uraDataService/invokeUraDS/v1?service=PMI_Resi_Transaction&batch={batch}"
-        try:
-            resp = requests.get(url, headers=headers, timeout=30)
-            resp.raise_for_status()
-            data = resp.json()
-            if data.get("Status") == "Success":
-                results = data.get("Result", [])
-                for proj in results:
-                    project_name = proj.get("project", "Unknown")
-                    street_name = proj.get("street", "")
-                    for tx in proj.get("transaction", []):
-                        # Filter by district first to save parsing overhead
-                        tx_dist = str(tx.get("district", "")).strip()
-                        if tx_dist.startswith("0") and len(tx_dist) > 1:
-                            tx_dist_clean = tx_dist[1:]
-                        else:
-                            tx_dist_clean = tx_dist
-                        
-                        if tx_dist_clean != district and tx_dist != district_padded:
-                            continue
+    # Map district to URA batch (Batch 1: 01-07, Batch 2: 08-14, Batch 3: 15-21, Batch 4: 22-28)
+    try:
+        dist_num = int(district)
+    except ValueError:
+        dist_num = 22
 
-                        # Map typeOfSale code to string
-                        tos_code = str(tx.get("typeOfSale", ""))
-                        sale_type = sale_type_map.get(tos_code, tos_code)
+    if 1 <= dist_num <= 7:
+        target_batch = 1
+    elif 8 <= dist_num <= 14:
+        target_batch = 2
+    elif 15 <= dist_num <= 21:
+        target_batch = 3
+    elif 22 <= dist_num <= 28:
+        target_batch = 4
+    else:
+        target_batch = 1
 
-                        # Property type filter using comparability helper
-                        tx_ptype = tx.get("propertyType", "")
-                        if property_type != "All" and not is_comparable_property_type(property_type, tx_ptype):
-                            continue
+    url = f"https://eservice.ura.gov.sg/uraDataService/invokeUraDS/v1?service=PMI_Resi_Transaction&batch={target_batch}"
+    try:
+        resp = requests.get(url, headers=headers, timeout=30)
+        resp.raise_for_status()
+        data = resp.json()
+        if data.get("Status") == "Success":
+            results = data.get("Result", [])
+            for proj in results:
+                project_name = proj.get("project", "Unknown")
+                street_name = proj.get("street", "")
+                for tx in proj.get("transaction", []):
+                    # Filter by district first to save parsing overhead
+                    tx_dist = str(tx.get("district", "")).strip()
+                    if tx_dist.startswith("0") and len(tx_dist) > 1:
+                        tx_dist_clean = tx_dist[1:]
+                    else:
+                        tx_dist_clean = tx_dist
+                    
+                    if tx_dist_clean != district and tx_dist != district_padded:
+                        continue
 
-                        # Tenure filter
-                        tenure_str = tx.get("tenure", "").lower()
-                        if tenure == "Freehold" and "freehold" not in tenure_str:
-                            continue
-                        if tenure == "99-year leasehold" and "99" not in tenure_str:
-                            continue
+                    # Map typeOfSale code to string
+                    tos_code = str(tx.get("typeOfSale", ""))
+                    sale_type = sale_type_map.get(tos_code, tos_code)
 
-                        # Flatten record for parsing
-                        raw_txns.append({
-                            "project": project_name,
-                            "street": street_name,
-                            "area": tx.get("area"),
-                            "floorRange": tx.get("floorRange"),
-                            "contractDate": tx.get("contractDate"),
-                            "typeOfSale": sale_type,
-                            "price": tx.get("price"),
-                            "propertyType": tx_ptype,
-                            "district": district,
-                            "typeOfArea": tx.get("typeOfArea"),
-                            "tenure": tx.get("tenure"),
-                        })
-        except Exception as e:
-            print(f"Error fetching batch {batch}: {e}")
-            continue
+                    # Property type filter using comparability helper
+                    tx_ptype = tx.get("propertyType", "")
+                    if property_type != "All" and not is_comparable_property_type(property_type, tx_ptype):
+                        continue
+
+                    # Tenure filter
+                    tenure_str = tx.get("tenure", "").lower()
+                    if tenure == "Freehold" and "freehold" not in tenure_str:
+                        continue
+                    if tenure == "99-year leasehold" and "99" not in tenure_str:
+                        continue
+
+                    # Flatten record for parsing
+                    raw_txns.append({
+                        "project": project_name,
+                        "street": street_name,
+                        "area": tx.get("area"),
+                        "floorRange": tx.get("floorRange"),
+                        "contractDate": tx.get("contractDate"),
+                        "typeOfSale": sale_type,
+                        "price": tx.get("price"),
+                        "propertyType": tx_ptype,
+                        "district": district,
+                        "typeOfArea": tx.get("typeOfArea"),
+                        "tenure": tx.get("tenure"),
+                    })
+    except Exception as e:
+        print(f"Error fetching batch {target_batch}: {e}")
 
     return _parse_transactions(raw_txns)
 
